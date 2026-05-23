@@ -1,0 +1,15 @@
+// ─── VIDEO TOUR REQUEST (NRI Feature — Phase 2) ───────────────────────────────
+// NRI buyers request virtual tours. Admin assigns a staff member to conduct them.
+
+model VideoTourRequest {
+  id          String    @id @default(auto()) @map("_id") @db.ObjectId
+  userId      String    @db.ObjectId
+  user        User      @relation(fields: [userId], references: [id])
+  propertyId  String    @db.ObjectId
+  // status: PENDING | ASSIGNED | COMPLETED
+  status      String    @default("PENDING")
+  assignedTo  String?   @db.ObjectId
+  videoUrl    String?
+  scheduledAt DateTime?
+  createdAt   DateTime  @default(now())
+}
