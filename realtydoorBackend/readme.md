@@ -29,6 +29,8 @@ cp .env.example .env
 # 3. Push Prisma schema to MongoDB
 npx prisma db push
 
+npm run db:seed
+
 # 4. Start dev server
 npm run dev
 ```
