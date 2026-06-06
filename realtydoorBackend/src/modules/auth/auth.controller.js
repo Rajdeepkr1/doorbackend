@@ -30,15 +30,19 @@ async function syncUser(req, res, next) {
     // Falls back to existing DB role, then 'USER' for brand-new records
     const clerkRole = clerkUser.publicMetadata?.role;
 
-    const existing = await prisma.user.findUnique({ where: { clerkId } });
+    // Look up by clerkId first; fall back to email so we don't duplicate a
+    // record that was created via a different auth method or the seed script.
+    let existing = await prisma.user.findUnique({ where: { clerkId } });
+    if (!existing && email) {
+      existing = await prisma.user.findUnique({ where: { email } });
+    }
     const resolvedRole = clerkRole || existing?.role || 'USER';
 
-    // Conflict #3: phone is @unique — if another account already holds this number
-    // (e.g. merged Clerk accounts) skip the phone update rather than crashing.
+    // phone is @unique — skip the update if another account already holds the number.
     let phoneToWrite = phone || undefined;
     if (phoneToWrite && existing?.phone !== phoneToWrite) {
       const phoneTaken = await prisma.user.findFirst({
-        where: { phone: phoneToWrite, NOT: { clerkId } },
+        where: { phone: phoneToWrite, NOT: { clerkId: existing?.clerkId ?? clerkId } },
         select: { id: true },
       });
       if (phoneTaken) phoneToWrite = undefined;
@@ -46,8 +50,9 @@ async function syncUser(req, res, next) {
 
     const user = existing
       ? await prisma.user.update({
-          where: { clerkId },
+          where: { id: existing.id },
           data: {
+            clerkId,           // stamp/correct the clerkId in case it came from email fallback
             name,
             email,
             ...(phoneToWrite !== undefined && { phone: phoneToWrite }),

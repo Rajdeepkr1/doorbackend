@@ -25,8 +25,14 @@ async function requestPhoneOtp(userId, phone) {
     },
   });
 
-  await sendPhoneVerificationOtp(phone, otp);
-  return { message: 'OTP sent via WhatsApp' };
+  try {
+    await sendPhoneVerificationOtp(phone, otp);
+  } catch (err) {
+    if (process.env.NODE_ENV === 'production') throw err;
+    console.warn(`[DEV] WATI send failed — OTP for ${phone}: ${otp}`);
+  }
+  const dev = process.env.NODE_ENV !== 'production';
+  return { message: 'OTP sent via WhatsApp', ...(dev && { _devOtp: otp }) };
 }
 
 async function verifyPhoneOtp(userId, otp) {
