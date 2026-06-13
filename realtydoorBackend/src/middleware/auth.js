@@ -6,6 +6,19 @@ const clerk = createClerkClient({ secretKey: process.env.CLERK_SECRET_KEY });
 
 async function authenticate(req, res, next) {
   try {
+    // Dev API-key bypass — never active in production
+    if (
+      process.env.NODE_ENV !== 'production' &&
+      process.env.DEV_API_KEY &&
+      req.headers['x-dev-api-key'] === process.env.DEV_API_KEY
+    ) {
+      const email = req.headers['x-dev-user-email'];
+      const dbUser = await prisma.user.findUnique({ where: { email } });
+      if (!dbUser) throw new ApiError(401, `Dev bypass: no user with email ${email}`);
+      req.user = dbUser;
+      return next();
+    }
+
     const token = req.headers.authorization?.split(' ')[1];
     if (!token) throw new ApiError(401, 'No token provided');
 

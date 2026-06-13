@@ -11,16 +11,24 @@ const client = axios.create({
 
 async function sendTemplateMessage(phone, templateName, parameters = []) {
   const e164 = phone.replace(/\D/g, '');
-  return client.post(`/api/v1/sendTemplateMessage?whatsappNumber=${e164}`, {
-    template_name: templateName,
-    broadcast_name: templateName,
-    parameters,
-  });
+  try {
+    const res = await client.post(`/api/v1/sendTemplateMessage?whatsappNumber=${e164}`, {
+      template_name: templateName,
+      broadcast_name: templateName,
+      parameters,
+    });
+    return res;
+  } catch (err) {
+    const status = err.response?.status;
+    const data   = JSON.stringify(err.response?.data);
+    console.error(`[WATI] ${templateName} → ${phone} failed: HTTP ${status} — ${data}`);
+    throw err;
+  }
 }
 
 async function sendSiteVisitOtp(phone, otp) {
   return sendTemplateMessage(phone, 'site_visit_otp', [
-    { name: 'otp', value: otp },
+    { name: '1', value: String(otp) },
   ]);
 }
 
@@ -38,7 +46,7 @@ async function sendBuyerFeedbackRequest(phone, partnerName) {
 
 async function sendPhoneVerificationOtp(phone, otp) {
   return sendTemplateMessage(phone, 'phone_verification_otp', [
-    { name: 'otp', value: otp },
+    { name: '1', value: String(otp) },
   ]);
 }
 

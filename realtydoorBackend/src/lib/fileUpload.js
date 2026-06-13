@@ -16,14 +16,16 @@ const REGION = process.env.AWS_REGION;
 
 const IMAGE_FORMATS = ['jpg', 'jpeg', 'png', 'webp'];
 const DOC_FORMATS   = ['jpg', 'jpeg', 'png', 'pdf'];
+const VIDEO_FORMATS = ['mp4', 'mov', 'webm', 'avi'];
+const MEDIA_FORMATS = [...new Set([...IMAGE_FORMATS, ...VIDEO_FORMATS])];
 const ALL_FORMATS   = [...new Set([...IMAGE_FORMATS, ...DOC_FORMATS])];
 
 // ─── Core helpers ─────────────────────────────────────────────────────────────
 
-function buildMulter(allowedFormats) {
+function buildMulter(allowedFormats, maxSizeMb = 10) {
   return multer({
     storage: multer.memoryStorage(),
-    limits: { fileSize: 10 * 1024 * 1024 }, // 10 MB
+    limits: { fileSize: maxSizeMb * 1024 * 1024 },
     fileFilter: (_req, file, cb) => {
       const ext = file.originalname.split('.').pop().toLowerCase();
       if (allowedFormats.includes(ext)) {
@@ -37,7 +39,7 @@ function buildMulter(allowedFormats) {
 
 async function s3Upload(buffer, folder, originalname, mimetype) {
   const ext = path.extname(originalname).toLowerCase();
-  const key = `realtydoor/${folder}/${randomUUID()}${ext}`;
+  const key = `${folder}/${randomUUID()}${ext}`;
 
   await s3.send(new PutObjectCommand({
     Bucket:      BUCKET,
@@ -84,8 +86,8 @@ async function uploadAllFiles(req, folder) {
 // Existing routes that call  uploader.single('file')  or  uploader.fields([...])
 // continue to work without any changes.
 
-function buildUploader(folder, allowedFormats) {
-  const upload = buildMulter(allowedFormats);
+function buildUploader(folder, allowedFormats, maxSizeMb = 10) {
+  const upload = buildMulter(allowedFormats, maxSizeMb);
 
   const withS3 = (multerMiddleware) => (req, res, next) => {
     multerMiddleware(req, res, async (err) => {
@@ -109,10 +111,13 @@ function buildUploader(folder, allowedFormats) {
 // ─── Pre-configured uploaders (same names as before) ─────────────────────────
 
 const propertyImageUploader  = buildUploader('properties', IMAGE_FORMATS);
+const propertyVideoUploader  = buildUploader('properties', VIDEO_FORMATS, 200); // 200 MB for videos
+const propertyMediaUploader  = buildUploader('properties', MEDIA_FORMATS, 200); // images + videos
 const kycDocUploader         = buildUploader('kyc',        DOC_FORMATS);
 const visitPhotoUploader     = buildUploader('visits',     IMAGE_FORMATS);
-const userDocUploader        = buildUploader('vault',      DOC_FORMATS);
+const userDocUploader        = buildUploader('documents',  DOC_FORMATS);
 const ticketEvidenceUploader = buildUploader('tickets',    ALL_FORMATS);
+const cmsMediaUploader       = buildUploader('admin-cms',  MEDIA_FORMATS);
 
 async function deleteFile(s3Key) {
   await s3.send(new DeleteObjectCommand({ Bucket: BUCKET, Key: s3Key }));
@@ -120,9 +125,12 @@ async function deleteFile(s3Key) {
 
 module.exports = {
   propertyImageUploader,
+  propertyVideoUploader,
+  propertyMediaUploader,
   kycDocUploader,
   visitPhotoUploader,
   userDocUploader,
   ticketEvidenceUploader,
+  cmsMediaUploader,
   deleteFile,
 };

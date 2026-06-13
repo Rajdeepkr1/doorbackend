@@ -52,4 +52,13 @@ async function uploadImages(req, res, next) {
   } catch (err) { next(err); }
 }
 
-module.exports = { search, getBySlug, getFeatured, create, update, uploadImages };
+async function uploadVideos(req, res, next) {
+  try {
+    const urls = (req.files || []).map(f => f.path);
+    if (!urls.length) throw new ApiError(400, 'No videos provided');
+    const property = await service.addVideos(req.params.id, req.user.id, urls);
+    success(res, property, 'Videos uploaded');
+  } catch (err) { next(err); }
+}
+
+module.exports = { search, getBySlug, getFeatured, create, update, uploadImages, uploadVideos };

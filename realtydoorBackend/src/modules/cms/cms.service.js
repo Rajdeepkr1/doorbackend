@@ -20,7 +20,12 @@ async function getBySlug(slug) {
 
 async function create(data) {
   if (data.isPublished && !data.publishedAt) data.publishedAt = new Date();
-  return prisma.contentBlock.create({ data });
+  try {
+    return await prisma.contentBlock.create({ data });
+  } catch (err) {
+    if (err.code === 'P2002') throw new ApiError(409, 'A content block with that slug already exists');
+    throw err;
+  }
 }
 
 async function update(id, data) {

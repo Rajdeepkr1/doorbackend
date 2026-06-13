@@ -94,14 +94,20 @@ async function toggleFavorite(userId, propertyId) {
   return { favorited: true };
 }
 
+function serializeDoc(doc) {
+  return { ...doc, uploadedAt: doc.uploadedAt?.toISOString?.() ?? doc.uploadedAt };
+}
+
 async function getDocuments(userId) {
-  return prisma.userDocument.findMany({ where: { userId }, orderBy: { uploadedAt: 'desc' } });
+  const docs = await prisma.userDocument.findMany({ where: { userId }, orderBy: { uploadedAt: 'desc' } });
+  return docs.map(serializeDoc);
 }
 
 async function uploadDocument(userId, documentType, fileUrl, fileName) {
-  return prisma.userDocument.create({
+  const doc = await prisma.userDocument.create({
     data: { userId, documentType, fileUrl, fileName },
   });
+  return serializeDoc(doc);
 }
 
 async function getSubscriptions(userId) {

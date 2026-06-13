@@ -120,4 +120,14 @@ async function addImages(id, partnerId, urls) {
   });
 }
 
-module.exports = { searchProperties, getPropertyBySlug, createProperty, updateProperty, getFeaturedProperties, addImages };
+async function addVideos(id, partnerId, urls) {
+  const property = await prisma.property.findUnique({ where: { id } });
+  if (!property) throw new ApiError(404, 'Property not found');
+  if (property.partnerId !== partnerId) throw new ApiError(403, 'Not your listing');
+  return prisma.property.update({
+    where: { id },
+    data: { videos: { push: urls } },
+  });
+}
+
+module.exports = { searchProperties, getPropertyBySlug, createProperty, updateProperty, getFeaturedProperties, addImages, addVideos };

@@ -49,6 +49,7 @@ model Property {
 
   // Media
   images          String[]
+  videos          String[]
   coverImageIndex Int      @default(0)
   floorPlanUrl    String?
   virtualTourUrl  String?
